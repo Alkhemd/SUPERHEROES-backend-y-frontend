@@ -27,7 +27,7 @@ async function saveBattle(battle) {
   await fs.writeJson(BATTLES_PATH, battles, { spaces: 2 });
 }
 
-async function fight(heroId, villainId) {
+async function fight(heroId, villainId, userId) {
   const heroes = await getHeroes();
   const villains = await getVillains();
 
@@ -63,6 +63,7 @@ async function fight(heroId, villainId) {
   const battleResult = {
     id: Date.now(),
     timestamp: new Date().toISOString(),
+    userId: userId, // Almacenar el userId
     hero: {
       id: hero.id,
       name: hero.name,
@@ -106,15 +107,20 @@ async function getBattleHistory() {
   return await getBattles();
 }
 
+async function getBattleHistoryByUser(userId) {
+  const all = await getBattleHistory();
+  return all.filter(b => b.userId === userId);
+}
+
 async function getBattleById(battleId) {
   const battles = await getBattles();
   return battles.find(b => b.id === battleId);
 }
 
 // NUEVO: Crear batalla por equipos
-async function createTeamBattle({ heroes, villains, userSide, firstHero, firstVillain, heroConfig = {}, villainConfig = {} }) {
+async function createTeamBattle({ heroes, villains, userSide, firstHero, firstVillain, heroConfig = {}, villainConfig = {}, userId }) {
   const id = Date.now();
-  const battle = new Battle({ id, heroes, villains, userSide, firstHero, firstVillain });
+  const battle = new Battle({ id, heroes, villains, userSide, firstHero, firstVillain, userId });
   
   // Cargar datos completos de héroes y villanos para obtener nivel y defensa por defecto
   const heroesData = await getHeroes();
@@ -170,10 +176,15 @@ async function createTeamBattle({ heroes, villains, userSide, firstHero, firstVi
 }
 
 // NUEVO: Realizar ataque por turnos en batalla por equipos
-async function teamAttack(battleId, attackerId, defenderId, attackType = null) {
+async function teamAttack(battleId, attackerId, defenderId, attackType = null, userId) {
   const battles = await getBattles();
   const battle = battles.find(b => b.id === battleId);
   if (!battle || battle.finished) throw new Error('Batalla no encontrada o ya finalizada');
+
+  // Validar que la batalla pertenezca al userId
+  if (battle.userId !== userId) {
+    throw new Error('No tienes permiso para atacar en esta batalla');
+  }
 
   // Determinar IDs activos
   const activeHero = battle.current.hero;
@@ -382,14 +393,17 @@ async function teamAttack(battleId, attackerId, defenderId, attackType = null) {
 }
 
 // NUEVO: Obtener batalla por ID (con registro completo)
-async function getTeamBattleById(battleId) {
+async function getTeamBattleById(battleId, userId) {
   const battles = await getBattles();
-  return battles.find(b => b.id === battleId);
+  const battle = battles.find(b => b.id === battleId);
+  if (battle && battle.userId === userId) return battle;
+  return null;
 }
 
 export default { 
   fight, 
   getBattleHistory, 
+  getBattleHistoryByUser,
   getBattleById, 
   // NUEVO:
   createTeamBattle,

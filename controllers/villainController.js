@@ -2,8 +2,14 @@ import express from "express";
 import { check, validationResult } from 'express-validator';
 import villainService from "../services/villainService.js";
 import Villain from "../models/villainModel.js";
+import authMiddleware from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
+
+// Declarar rutas públicas aquí si las hubiera
+
+// Proteger solo las rutas siguientes
+// Eliminar router.use(authMiddleware)
 
 /**
  * @swagger
@@ -21,9 +27,9 @@ const router = express.Router();
  *               items:
  *                 $ref: '#/components/schemas/Villain'
  */
-router.get("/villains", async (req, res) => {
+router.get("/villains", authMiddleware, async (req, res) => {
     try {
-        const villains = await villainService.getAllVillains();
+        const villains = await villainService.getAllVillainsByUser(req.userId);
         res.json(villains);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -51,7 +57,8 @@ router.get("/villains", async (req, res) => {
 router.post("/villains",
     [
         check('name').not().isEmpty().withMessage('El nombre es requerido'),
-        check('alias').not().isEmpty().withMessage('El alias es requerido')
+        check('alias').not().isEmpty().withMessage('El alias es requerido'),
+        authMiddleware
     ],
     async (req, res) => {
         const errors = validationResult(req);
@@ -60,7 +67,7 @@ router.post("/villains",
         }
         try {
             const { name, alias, city, team } = req.body;
-            const newVillain = new Villain(null, name, alias, city, team);
+            const newVillain = new Villain(null, name, alias, city, team, req.userId);
             const addedVillain = await villainService.addVillain(newVillain);
             res.status(201).json(addedVillain);
         } catch (error) {
@@ -92,7 +99,7 @@ router.post("/villains",
  *       404:
  *         description: Villano no encontrado
  */
-router.put("/villains/:id", async (req, res) => {
+router.put("/villains/:id", authMiddleware, async (req, res) => {
     const id = req.params.id;
     // Validar que el id sea un número positivo
     if (isNaN(id) || parseInt(id) <= 0) {
@@ -124,7 +131,7 @@ router.put("/villains/:id", async (req, res) => {
  *       404:
  *         description: Villano no encontrado
  */
-router.delete('/villains/:id', async (req, res) => {
+router.delete('/villains/:id', authMiddleware, async (req, res) => {
     const id = req.params.id;
     // Validar que el id sea un número positivo
     if (isNaN(id) || parseInt(id) <= 0) {
@@ -154,7 +161,7 @@ router.delete('/villains/:id', async (req, res) => {
  *       200:
  *         description: Lista de villanos de la ciudad
  */
-router.get('/villains/city/:city', async (req, res) => {
+router.get('/villains/city/:city', authMiddleware, async (req, res) => {
     const city = req.params.city;
     // Validar si es un número
     if (!isNaN(city)) {

@@ -6,6 +6,11 @@ async function getAllHeroes() {
     return await heroRepository.getHeroes();
 }
 
+async function getAllHeroesByUser(userId) {
+  const all = await getAllHeroes();
+  return all.filter(h => h.userId === userId);
+}
+
 async function addHero(hero) {
     if (!hero.name || !hero.alias) {
         throw new Error("El héroe debe tener un nombre y un alias.");
@@ -97,5 +102,6 @@ export default {
     deleteHero,
     findHeroesByCity,
     faceVillain,
-    faceVillainVsHero
+    faceVillainVsHero,
+    getAllHeroesByUser
 };

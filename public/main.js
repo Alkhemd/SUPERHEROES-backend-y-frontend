@@ -786,6 +786,123 @@ function createCharacterConfigForms() {
   });
 }
 
+// --- AUTENTICACIÓN JWT ---
+let AUTH_TOKEN = localStorage.getItem('jwt_token') || null;
+let AUTH_USER = localStorage.getItem('jwt_user') || null;
+
+function setAuth(token, user) {
+  AUTH_TOKEN = token;
+  AUTH_USER = user;
+  if (token) {
+    localStorage.setItem('jwt_token', token);
+    localStorage.setItem('jwt_user', user);
+  } else {
+    localStorage.removeItem('jwt_token');
+    localStorage.removeItem('jwt_user');
+  }
+  updateAuthUI();
+}
+
+function updateAuthUI() {
+  const authArea = document.getElementById('auth-area');
+  const authForms = document.getElementById('auth-forms');
+  const userInfo = document.getElementById('user-info');
+  const userWelcome = document.getElementById('user-welcome');
+  if (!AUTH_TOKEN) {
+    authArea.style.display = 'block';
+    authForms.style.display = 'block';
+    userInfo.style.display = 'none';
+    if (userWelcome) userWelcome.textContent = '';
+    // Bloquear acciones
+    document.querySelectorAll('.container, .list, .form, .battles').forEach(el => el.style.opacity = '0.3');
+  } else {
+    authArea.style.display = 'block';
+    authForms.style.display = 'none';
+    userInfo.style.display = 'block';
+    if (userWelcome) userWelcome.textContent = `Bienvenido, ${AUTH_USER}`;
+    // Desbloquear acciones
+    document.querySelectorAll('.container, .list, .form, .battles').forEach(el => el.style.opacity = '1');
+  }
+}
+
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const username = document.getElementById('login-username').value;
+  const password = document.getElementById('login-password').value;
+  const errorSpan = document.getElementById('login-error');
+  errorSpan.textContent = '';
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      errorSpan.textContent = err.error || 'Error de autenticación';
+      return;
+    }
+    const data = await res.json();
+    setAuth(data.token, username);
+    document.getElementById('login-form').reset();
+    loadHeroesAndVillains();
+    loadBattles();
+  } catch (err) {
+    errorSpan.textContent = 'Error de red';
+  }
+});
+
+document.getElementById('register-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const username = document.getElementById('register-username').value;
+  const password = document.getElementById('register-password').value;
+  const errorSpan = document.getElementById('register-error');
+  const successSpan = document.getElementById('register-success');
+  errorSpan.textContent = '';
+  successSpan.textContent = '';
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      errorSpan.textContent = err.error || 'Error de registro';
+      return;
+    }
+    successSpan.textContent = '¡Registro exitoso! Ahora puedes iniciar sesión.';
+    document.getElementById('register-form').reset();
+  } catch (err) {
+    errorSpan.textContent = 'Error de red';
+  }
+});
+
+document.getElementById('logout-btn').addEventListener('click', function() {
+  setAuth(null, null);
+  loadHeroesAndVillains();
+  loadBattles();
+});
+
+// --- Interceptar fetch para enviar el token JWT ---
+const originalFetch = window.fetch;
+window.fetch = async function(url, options = {}) {
+  if (url.startsWith('/api/') && AUTH_TOKEN) {
+    options.headers = options.headers || {};
+    options.headers['Authorization'] = 'Bearer ' + AUTH_TOKEN;
+  }
+  const res = await originalFetch(url, options);
+  // Si el token expiró o es inválido, forzar logout
+  if (res.status === 401) {
+    setAuth(null, null);
+    alert('Sesión expirada o inválida. Por favor, inicia sesión de nuevo.');
+  }
+  return res;
+};
+
+// Inicializar UI de autenticación
+updateAuthUI();
+
 // Inicializar
 loadHeroesAndVillains();
 loadBattles();

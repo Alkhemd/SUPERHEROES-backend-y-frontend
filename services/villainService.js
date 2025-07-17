@@ -4,6 +4,11 @@ async function getAllVillains() {
     return await villainRepository.getVillains();
 }
 
+async function getAllVillainsByUser(userId) {
+  const all = await getAllVillains();
+  return all.filter(v => v.userId === userId);
+}
+
 async function addVillain(villain) {
     if (!villain.name || !villain.alias) {
         throw new Error("El villano debe tener un nombre y un alias.");
@@ -49,5 +54,6 @@ export default {
     addVillain,
     updateVillain,
     deleteVillain,
-    findVillainsByCity
+    findVillainsByCity,
+    getAllVillainsByUser
 };

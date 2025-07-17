@@ -2,8 +2,14 @@ import express from "express";
 import { check, validationResult } from 'express-validator';
 import heroService from "../services/heroService.js";
 import Hero from "../models/heroModel.js";
+import authMiddleware from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
+
+// Declarar rutas públicas aquí si las hubiera
+
+// Proteger solo las rutas siguientes
+// Eliminar router.use(authMiddleware)
 
 /**
  * @swagger
@@ -21,9 +27,9 @@ const router = express.Router();
  *               items:
  *                 $ref: '#/components/schemas/Hero'
  */
-router.get("/heroes", async (req, res) => {
+router.get("/heroes", authMiddleware, async (req, res) => {
     try {
-        const heroes = await heroService.getAllHeroes();
+        const heroes = await heroService.getAllHeroesByUser(req.userId);
         res.json(heroes);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -51,7 +57,8 @@ router.get("/heroes", async (req, res) => {
 router.post("/heroes",
     [
         check('name').not().isEmpty().withMessage('El nombre es requerido'),
-        check('alias').not().isEmpty().withMessage('El alias es requerido')
+        check('alias').not().isEmpty().withMessage('El alias es requerido'),
+        authMiddleware
     ],
     async (req, res) => {
         const errors = validationResult(req);
@@ -60,7 +67,7 @@ router.post("/heroes",
         }
         try {
             const { name, alias, city, team } = req.body;
-            const newHero = new Hero(null, name, alias, city, team);
+            const newHero = new Hero(null, name, alias, city, team, req.userId);
             const addedHero = await heroService.addHero(newHero);
             res.status(201).json(addedHero);
         } catch (error) {
@@ -92,7 +99,7 @@ router.post("/heroes",
  *       404:
  *         description: Héroe no encontrado
  */
-router.put("/heroes/:id", async (req, res) => {
+router.put("/heroes/:id", authMiddleware, async (req, res) => {
     const id = req.params.id;
     // Validar que el id sea un número positivo
     if (isNaN(id) || parseInt(id) <= 0) {
@@ -124,7 +131,7 @@ router.put("/heroes/:id", async (req, res) => {
  *       404:
  *         description: Héroe no encontrado
  */
-router.delete('/heroes/:id', async (req, res) => {
+router.delete('/heroes/:id', authMiddleware, async (req, res) => {
     const id = req.params.id;
     // Validar que el id sea un número positivo
     if (isNaN(id) || parseInt(id) <= 0) {
@@ -154,7 +161,7 @@ router.delete('/heroes/:id', async (req, res) => {
  *       200:
  *         description: Lista de héroes de la ciudad
  */
-router.get('/heroes/city/:city', async (req, res) => {
+router.get('/heroes/city/:city', authMiddleware, async (req, res) => {
     const city = req.params.city;
     // Validar si es un número
     if (!isNaN(city)) {

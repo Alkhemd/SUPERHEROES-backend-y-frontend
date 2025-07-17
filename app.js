@@ -2,6 +2,7 @@ import express from 'express';
 import heroController from './controllers/heroController.js';
 import villainController from './controllers/villainController.js';
 import battleController from './controllers/battleController.js'; // 👈 NUEVO
+import authController from './controllers/authController.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerConfig from './swaggerConfig.js';
@@ -16,6 +17,7 @@ app.use(express.static('public'));
 app.use('/api', heroController);
 app.use('/api', villainController);
 app.use('/api', battleController); // 👈 NUEVO
+app.use('/api/auth', authController);
 
 const PORT = 3001;
 app.listen(PORT, () => {

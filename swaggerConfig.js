@@ -12,6 +12,16 @@ export default {
         url: 'http://localhost:3001/api',
       },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    security: [{ bearerAuth: [] }],
   },
   apis: ['./controllers/*.js'], // Incluye todos los controladores
 };

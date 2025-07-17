@@ -1,8 +1,14 @@
 // controllers/battleController.js
 import express from 'express';
 import battleService from '../services/battleService.js';
+import authMiddleware from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
+
+// Declarar rutas públicas aquí si las hubiera
+
+// Proteger solo las rutas siguientes
+// Eliminar router.use(authMiddleware)
 
 /**
  * @swagger
@@ -31,10 +37,10 @@ const router = express.Router();
  *       404:
  *         description: Héroe o villano no encontrado
  */
-router.post('/battle/duel/:heroId/:villainId', async (req, res) => {
+router.post('/battle/duel/:heroId/:villainId', authMiddleware, async (req, res) => {
   try {
     const { heroId, villainId } = req.params;
-    const battle = await battleService.fight(parseInt(heroId), parseInt(villainId));
+    const battle = await battleService.fight(parseInt(heroId), parseInt(villainId), req.userId);
     res.status(201).json(battle);
   } catch (error) {
     if (error.message.includes('no encontrado')) {
@@ -55,9 +61,9 @@ router.post('/battle/duel/:heroId/:villainId', async (req, res) => {
  *       200:
  *         description: Lista de todas las batallas
  */
-router.get('/battles', async (req, res) => {
+router.get('/battles', authMiddleware, async (req, res) => {
   try {
-    const battles = await battleService.getBattleHistory();
+    const battles = await battleService.getBattleHistoryByUser(req.userId);
     res.status(200).json(battles);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -83,7 +89,7 @@ router.get('/battles', async (req, res) => {
  *       404:
  *         description: Batalla no encontrada
  */
-router.get('/battles/:battleId', async (req, res) => {
+router.get('/battles/:battleId', authMiddleware, async (req, res) => {
   try {
     const { battleId } = req.params;
     const battle = await battleService.getBattleById(parseInt(battleId));
@@ -137,7 +143,7 @@ router.get('/battles/:battleId', async (req, res) => {
  *       201:
  *         description: Batalla creada
  */
-router.post('/battle/team', async (req, res) => {
+router.post('/battle/team', authMiddleware, async (req, res) => {
   try {
     const { heroes, villains, userSide, firstHero, firstVillain, heroConfig, villainConfig } = req.body;
     const battle = await battleService.createTeamBattle({ 
@@ -147,7 +153,8 @@ router.post('/battle/team', async (req, res) => {
       firstHero, 
       firstVillain,
       heroConfig,
-      villainConfig
+      villainConfig,
+      userId: req.userId
     });
     res.status(201).json(battle);
   } catch (error) {
@@ -187,11 +194,11 @@ router.post('/battle/team', async (req, res) => {
  *       200:
  *         description: Acción realizada
  */
-router.post('/battle/:id/attack', async (req, res) => {
+router.post('/battle/:id/attack', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const { attacker, defender, attackType } = req.body;
-    const battle = await battleService.teamAttack(Number(id), attacker, defender, attackType);
+    const battle = await battleService.teamAttack(Number(id), attacker, defender, attackType, req.userId);
     res.status(200).json(battle);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -215,10 +222,10 @@ router.post('/battle/:id/attack', async (req, res) => {
  *       200:
  *         description: Registro de la batalla
  */
-router.get('/battle/:id', async (req, res) => {
+router.get('/battle/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    const battle = await battleService.getTeamBattleById(Number(id));
+    const battle = await battleService.getTeamBattleById(Number(id), req.userId);
     if (!battle) return res.status(404).json({ error: 'Batalla no encontrada' });
     res.status(200).json(battle);
   } catch (error) {
