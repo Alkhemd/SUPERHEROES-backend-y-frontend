@@ -14,6 +14,11 @@ const app = express();
 const swaggerSpec = swaggerJSDoc(swaggerConfig);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec)); // Swagger SIEMPRE antes del frontend
 
+// Redirigir la raíz al Swagger UI
+app.get('/', (req, res) => {
+  res.redirect('/api-docs');
+});
+
 app.use(express.json());
 
 // Rutas de la API
