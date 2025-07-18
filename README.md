@@ -182,3 +182,47 @@ api-superheroes/
 ## 📝 Licencia
 
 ISC License 
+
+## 🛠️ Troubleshooting: Batallas por Equipos (Solución a problema de turnos y participantes)
+
+### Problema
+Al crear una batalla por equipos (3 vs 3), solo participaba 1 personaje de cada bando y la batalla terminaba cuando uno era derrotado, sin que los otros dos participaran.
+
+### Análisis
+- El endpoint de ataque y la lógica interna buscaban la batalla por el campo `id` propio (numérico), pero el endpoint requería el campo `_id` de MongoDB (ObjectId).
+- Además, al crear la batalla, a veces solo se seleccionaba 1 personaje por bando por error en el payload.
+- La lógica de turnos y cambio de personaje activo estaba bien, pero si el payload era incorrecto, la batalla se comportaba como 1 vs 1.
+
+### Solución
+1. **Unificar la búsqueda de batallas por `_id` de MongoDB** en todos los endpoints y funciones internas.
+2. **Actualizar la función `teamAttack`** para buscar y actualizar la batalla usando Mongoose y el campo `_id`.
+3. **Verificar que el payload de creación de batalla incluya 3 héroes y 3 villanos** en los arrays `heroes` y `villains`.
+4. **Probar la batalla**: ahora, cuando un personaje es derrotado, el siguiente entra automáticamente y la batalla termina solo cuando todos los personajes de un equipo han sido derrotados.
+
+### Ejemplo de payload correcto para batalla por equipos
+```json
+{
+  "heroes": [1, 2, 3],
+  "villains": [1, 2, 3],
+  "userSide": "heroes",
+  "firstHero": 1,
+  "firstVillain": 1,
+  "heroConfig": {
+    "1": { "level": 3, "defense": 20 },
+    "2": { "level": 2, "defense": 18 },
+    "3": { "level": 3, "defense": 22 }
+  },
+  "villainConfig": {
+    "1": { "level": 1, "defense": 19 },
+    "2": { "level": 2, "defense": 17 },
+    "3": { "level": 3, "defense": 23 }
+  }
+}
+```
+
+### Resultado
+- Las batallas por equipos ahora funcionan correctamente: todos los personajes participan y la batalla termina solo cuando un equipo es completamente derrotado.
+- El endpoint de ataque y la lógica interna son consistentes usando `_id` de MongoDB.
+
+---
+¡Problema resuelto tras mucho análisis y pruebas! 🎉 

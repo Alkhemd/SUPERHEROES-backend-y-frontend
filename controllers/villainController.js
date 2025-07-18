@@ -29,7 +29,8 @@ const router = express.Router();
  */
 router.get("/villains", authMiddleware, async (req, res) => {
     try {
-        const villains = await villainService.getAllVillainsByUser(req.userId);
+        // Obtener todos los villanos sin filtrar por userId
+        const villains = await villainService.getAllVillains();
         res.json(villains);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -67,7 +68,8 @@ router.post("/villains",
         }
         try {
             const { name, alias, city, team } = req.body;
-            const newVillain = new Villain(null, name, alias, city, team, req.userId);
+            // Crear el objeto villano como POJO y agregar el userId del token
+            const newVillain = { name, alias, city, team, userId: req.userId };
             const addedVillain = await villainService.addVillain(newVillain);
             res.status(201).json(addedVillain);
         } catch (error) {
@@ -86,7 +88,8 @@ router.post("/villains",
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string  # Cambiado de integer a string para permitir ObjectId de MongoDB
+ *         description: ID del villano (ObjectId de MongoDB o id numérico)
  *     requestBody:
  *       required: true
  *       content:
@@ -101,10 +104,6 @@ router.post("/villains",
  */
 router.put("/villains/:id", authMiddleware, async (req, res) => {
     const id = req.params.id;
-    // Validar que el id sea un número positivo
-    if (isNaN(id) || parseInt(id) <= 0) {
-        return res.status(400).json({ error: 'El id debe ser un número positivo.' });
-    }
     try {
         const updatedVillain = await villainService.updateVillain(id, req.body);
         res.json(updatedVillain);
@@ -124,7 +123,8 @@ router.put("/villains/:id", authMiddleware, async (req, res) => {
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string  # Cambiado de integer a string para permitir ObjectId de MongoDB
+ *         description: ID del villano (ObjectId de MongoDB o id numérico)
  *     responses:
  *       200:
  *         description: Villano eliminado
@@ -133,10 +133,6 @@ router.put("/villains/:id", authMiddleware, async (req, res) => {
  */
 router.delete('/villains/:id', authMiddleware, async (req, res) => {
     const id = req.params.id;
-    // Validar que el id sea un número positivo
-    if (isNaN(id) || parseInt(id) <= 0) {
-        return res.status(400).json({ error: 'El id debe ser un número positivo.' });
-    }
     try {
         const result = await villainService.deleteVillain(id);
         res.json(result);

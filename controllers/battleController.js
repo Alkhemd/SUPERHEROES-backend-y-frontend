@@ -21,14 +21,14 @@ const router = express.Router();
  *         name: heroId
  *         required: true
  *         schema:
- *           type: integer
- *         description: ID del héroe
+ *           type: string  # Cambiado de integer a string para permitir ObjectId de MongoDB
+ *         description: ID del héroe (ObjectId de MongoDB o id numérico)
  *       - in: path
  *         name: villainId
  *         required: true
  *         schema:
- *           type: integer
- *         description: ID del villano
+ *           type: string  # Cambiado de integer a string para permitir ObjectId de MongoDB
+ *         description: ID del villano (ObjectId de MongoDB o id numérico)
  *     responses:
  *       201:
  *         description: Resultado de la batalla
@@ -40,7 +40,7 @@ const router = express.Router();
 router.post('/battle/duel/:heroId/:villainId', authMiddleware, async (req, res) => {
   try {
     const { heroId, villainId } = req.params;
-    const battle = await battleService.fight(parseInt(heroId), parseInt(villainId), req.userId);
+    const battle = await battleService.fight(heroId, villainId, req.userId);
     res.status(201).json(battle);
   } catch (error) {
     if (error.message.includes('no encontrado')) {
@@ -63,8 +63,9 @@ router.post('/battle/duel/:heroId/:villainId', authMiddleware, async (req, res) 
  */
 router.get('/battles', authMiddleware, async (req, res) => {
   try {
+    // Solo devolver batallas del usuario autenticado
     const battles = await battleService.getBattleHistoryByUser(req.userId);
-    res.status(200).json(battles);
+    res.json(battles);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -81,8 +82,8 @@ router.get('/battles', authMiddleware, async (req, res) => {
  *         name: battleId
  *         required: true
  *         schema:
- *           type: integer
- *         description: ID de la batalla
+ *           type: string  # Cambiado de integer a string para permitir ObjectId de MongoDB
+ *         description: ID de la batalla (ObjectId de MongoDB)
  *     responses:
  *       200:
  *         description: Detalles de la batalla
@@ -92,12 +93,11 @@ router.get('/battles', authMiddleware, async (req, res) => {
 router.get('/battles/:battleId', authMiddleware, async (req, res) => {
   try {
     const { battleId } = req.params;
-    const battle = await battleService.getBattleById(parseInt(battleId));
-    
+    // Pasar el battleId como string directamente
+    const battle = await battleService.getBattleByMongoId(battleId);
     if (!battle) {
       return res.status(404).json({ error: 'Batalla no encontrada' });
     }
-    
     res.status(200).json(battle);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -173,8 +173,8 @@ router.post('/battle/team', authMiddleware, async (req, res) => {
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: ID de la batalla
+ *           type: string
+ *         description: ID de la batalla (ObjectId de MongoDB)
  *     requestBody:
  *       required: true
  *       content:
@@ -198,8 +198,10 @@ router.post('/battle/:id/attack', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const { attacker, defender, attackType } = req.body;
-    const battle = await battleService.teamAttack(Number(id), attacker, defender, attackType, req.userId);
-    res.status(200).json(battle);
+    const battle = await battleService.getBattleByMongoId(id);
+    if (!battle || battle.finished) throw new Error('Batalla no encontrada o ya finalizada');
+    const updatedBattle = await battleService.teamAttack(battle._id, attacker, defender, attackType, req.userId);
+    res.status(200).json(updatedBattle);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -216,8 +218,8 @@ router.post('/battle/:id/attack', authMiddleware, async (req, res) => {
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: ID de la batalla
+ *           type: string  # Cambiado de integer a string para permitir ObjectId de MongoDB
+ *         description: ID de la batalla (ObjectId de MongoDB)
  *     responses:
  *       200:
  *         description: Registro de la batalla
@@ -225,7 +227,8 @@ router.post('/battle/:id/attack', authMiddleware, async (req, res) => {
 router.get('/battle/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    const battle = await battleService.getTeamBattleById(Number(id), req.userId);
+    // Pasar el id como string directamente
+    const battle = await battleService.getTeamBattleById(id, req.userId);
     if (!battle) return res.status(404).json({ error: 'Batalla no encontrada' });
     res.status(200).json(battle);
   } catch (error) {

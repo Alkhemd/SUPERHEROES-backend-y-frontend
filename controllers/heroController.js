@@ -29,7 +29,8 @@ const router = express.Router();
  */
 router.get("/heroes", authMiddleware, async (req, res) => {
     try {
-        const heroes = await heroService.getAllHeroesByUser(req.userId);
+        // Obtener todos los héroes sin filtrar por userId
+        const heroes = await heroService.getAllHeroes();
         res.json(heroes);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -67,7 +68,8 @@ router.post("/heroes",
         }
         try {
             const { name, alias, city, team } = req.body;
-            const newHero = new Hero(null, name, alias, city, team, req.userId);
+            // Crear el objeto héroe como POJO y agregar el userId del token
+            const newHero = { name, alias, city, team, userId: req.userId };
             const addedHero = await heroService.addHero(newHero);
             res.status(201).json(addedHero);
         } catch (error) {
@@ -86,7 +88,8 @@ router.post("/heroes",
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string  # Cambiado de integer a string para permitir ObjectId de MongoDB
+ *         description: ID del héroe (ObjectId de MongoDB o id numérico)
  *     requestBody:
  *       required: true
  *       content:
@@ -101,10 +104,6 @@ router.post("/heroes",
  */
 router.put("/heroes/:id", authMiddleware, async (req, res) => {
     const id = req.params.id;
-    // Validar que el id sea un número positivo
-    if (isNaN(id) || parseInt(id) <= 0) {
-        return res.status(400).json({ error: 'El id debe ser un número positivo.' });
-    }
     try {
         const updatedHero = await heroService.updateHero(id, req.body);
         res.json(updatedHero);
@@ -124,7 +123,8 @@ router.put("/heroes/:id", authMiddleware, async (req, res) => {
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string  # Cambiado de integer a string para permitir ObjectId de MongoDB
+ *         description: ID del héroe (ObjectId de MongoDB o id numérico)
  *     responses:
  *       200:
  *         description: Héroe eliminado
@@ -133,10 +133,6 @@ router.put("/heroes/:id", authMiddleware, async (req, res) => {
  */
 router.delete('/heroes/:id', authMiddleware, async (req, res) => {
     const id = req.params.id;
-    // Validar que el id sea un número positivo
-    if (isNaN(id) || parseInt(id) <= 0) {
-        return res.status(400).json({ error: 'El id debe ser un número positivo.' });
-    }
     try {
         const result = await heroService.deleteHero(id);
         res.json(result);

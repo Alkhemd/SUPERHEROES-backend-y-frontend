@@ -1,8 +1,10 @@
-// Modelo de usuario para autenticación y autorización
-export default class User {
-  constructor({ id, username, password }) {
-    this.id = id;
-    this.username = username;
-    this.password = password; // Debe estar hasheado
-  }
-} 
+import mongoose from 'mongoose';
+
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  email:    { type: String, required: true, unique: true },
+  password: { type: String, required: true }
+}, { collection: 'users' });
+
+const User = mongoose.model('User', userSchema);
+export default User; 

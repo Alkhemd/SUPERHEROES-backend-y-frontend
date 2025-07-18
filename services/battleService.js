@@ -1,9 +1,22 @@
+import mongoose from 'mongoose';
 import fs from 'fs-extra';
 import Battle from '../models/battleModel.js';
+import Hero from '../models/heroModel.js';
+import Villain from '../models/villainModel.js';
 
 const HEROES_PATH = './superheroes.json';
 const VILLAINS_PATH = './villains.json';
-const BATTLES_PATH = './📄 battles.json';
+// const BATTLES_PATH = './📄 battles.json'; // Ya no se usa
+
+// --- Conexión a MongoDB ---
+import dotenv from 'dotenv';
+dotenv.config();
+
+mongoose.connect(process.env.MONGO_URI);
+
+// --- Esquema de Batalla para Mongoose ---
+const battleSchema = new mongoose.Schema({}, { strict: false, collection: 'battles' });
+const BattleMongoose = mongoose.model('Battle', battleSchema);
 
 function getHeroes() {
   return fs.readJson(HEROES_PATH);
@@ -13,26 +26,39 @@ function getVillains() {
   return fs.readJson(VILLAINS_PATH);
 }
 
+// --- Persistencia en MongoDB ---
 async function getBattles() {
-  try {
-    return await fs.readJson(BATTLES_PATH);
-  } catch (error) {
-    return [];
-  }
+  return await BattleMongoose.find({}).lean();
 }
 
 async function saveBattle(battle) {
-  const battles = await getBattles();
-  battles.push(battle);
-  await fs.writeJson(BATTLES_PATH, battles, { spaces: 2 });
+  // Asegura que el campo 'id' esté presente en el documento guardado
+  if (!battle.id) {
+    battle.id = Date.now();
+  }
+  await BattleMongoose.create(battle);
+}
+
+function isValidObjectId(id) {
+  return mongoose.Types.ObjectId.isValid(id);
 }
 
 async function fight(heroId, villainId, userId) {
-  const heroes = await getHeroes();
-  const villains = await getVillains();
+  let hero, villain;
 
-  const hero = heroes.find(h => h.id === heroId);
-  const villain = villains.find(v => v.id === villainId);
+  // Buscar héroe
+  if (isValidObjectId(heroId)) {
+    hero = await Hero.findById(heroId).lean();
+  } else if (!isNaN(heroId)) {
+    hero = await Hero.findOne({ id: Number(heroId) }).lean();
+  }
+
+  // Buscar villano
+  if (isValidObjectId(villainId)) {
+    villain = await Villain.findById(villainId).lean();
+  } else if (!isNaN(villainId)) {
+    villain = await Villain.findOne({ id: Number(villainId) }).lean();
+  }
 
   if (!hero) {
     throw new Error(`Héroe con ID ${heroId} no encontrado`);
@@ -121,6 +147,7 @@ async function getBattleById(battleId) {
 async function createTeamBattle({ heroes, villains, userSide, firstHero, firstVillain, heroConfig = {}, villainConfig = {}, userId }) {
   const id = Date.now();
   const battle = new Battle({ id, heroes, villains, userSide, firstHero, firstVillain, userId });
+  battle.id = id; // Asegura que el campo id esté presente
   
   // Cargar datos completos de héroes y villanos para obtener nivel y defensa por defecto
   const heroesData = await getHeroes();
@@ -172,13 +199,15 @@ async function createTeamBattle({ heroes, villains, userSide, firstHero, firstVi
   });
   
   await saveBattle(battle);
-  return battle;
+  // Construir la respuesta con _id justo debajo de id
+  const response = { id: battle.id, _id: battle._id, ...battle };
+  return response;
 }
 
 // NUEVO: Realizar ataque por turnos en batalla por equipos
 async function teamAttack(battleId, attackerId, defenderId, attackType = null, userId) {
-  const battles = await getBattles();
-  const battle = battles.find(b => b.id === battleId);
+  // Buscar la batalla por _id de MongoDB
+  const battle = await BattleMongoose.findOne({ _id: battleId }).lean();
   if (!battle || battle.finished) throw new Error('Batalla no encontrada o ya finalizada');
 
   // Validar que la batalla pertenezca al userId
@@ -317,11 +346,16 @@ async function teamAttack(battleId, attackerId, defenderId, attackType = null, u
     return true; // Continúa la batalla
   }
 
+  // Función para guardar la batalla actualizada usando Mongoose
+  async function updateBattle() {
+    await BattleMongoose.findByIdAndUpdate(battleId, battle, { new: true });
+  }
+
   // 1. Ataque del usuario (solo entre activos)
   if (!realizarAtaque(attackerId, defenderId, attackType)) {
     // Actualizar los activos si alguno murió
     actualizarActivos();
-    await fs.writeJson(BATTLES_PATH, battles, { spaces: 2 });
+    await updateBattle(); // Guardar batalla actualizada
     return battle;
   }
   battle.turn++;
@@ -341,7 +375,7 @@ async function teamAttack(battleId, attackerId, defenderId, attackType = null, u
       // No hay más personajes vivos en el equipo del defensor
       battle.finished = true;
       battle.winner = battle.current.side;
-      await fs.writeJson(BATTLES_PATH, battles, { spaces: 2 });
+      await updateBattle(); // Guardar batalla actualizada
       return battle;
     } else {
       // Cambiar al siguiente personaje vivo del equipo del defensor
@@ -349,7 +383,7 @@ async function teamAttack(battleId, attackerId, defenderId, attackType = null, u
       // Alternar turno al equipo del usuario
       battle.current.side = userTeam;
       actualizarActivos();
-      await fs.writeJson(BATTLES_PATH, battles, { spaces: 2 });
+      await updateBattle(); // Guardar batalla actualizada
       return battle;
     }
   }
@@ -365,7 +399,7 @@ async function teamAttack(battleId, attackerId, defenderId, attackType = null, u
     // Si no hay personajes vivos en el equipo contrario, termina la batalla
     battle.finished = true;
     battle.winner = battle.current.side;
-    await fs.writeJson(BATTLES_PATH, battles, { spaces: 2 });
+    await updateBattle(); // Guardar batalla actualizada
     return battle;
   }
 
@@ -388,16 +422,21 @@ async function teamAttack(battleId, attackerId, defenderId, attackType = null, u
     }
   }
 
-  await fs.writeJson(BATTLES_PATH, battles, { spaces: 2 });
+  await updateBattle(); // Guardar batalla final
   return battle;
 }
 
 // NUEVO: Obtener batalla por ID (con registro completo)
 async function getTeamBattleById(battleId, userId) {
-  const battles = await getBattles();
-  const battle = battles.find(b => b.id === battleId);
+  // Buscar la batalla por _id de MongoDB
+  const battle = await BattleMongoose.findOne({ _id: battleId }).lean();
   if (battle && battle.userId === userId) return battle;
   return null;
+}
+
+async function getBattleByMongoId(mongoId) {
+  if (!mongoose.Types.ObjectId.isValid(mongoId)) return null;
+  return await BattleMongoose.findOne({ _id: mongoId }).lean();
 }
 
 export default { 
@@ -409,4 +448,5 @@ export default {
   createTeamBattle,
   teamAttack,
   getTeamBattleById,
+  getBattleByMongoId,
 };

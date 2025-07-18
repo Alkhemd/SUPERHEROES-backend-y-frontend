@@ -1,52 +1,60 @@
-import villainRepository from '../repositories/villainRepository.js';
+import Villain from '../models/villainModel.js';
 
 async function getAllVillains() {
-    return await villainRepository.getVillains();
+    const villains = await Villain.find().lean();
+    return villains.map(v => ({
+        id: v._id,
+        name: v.name,
+        alias: v.alias,
+        city: v.city,
+        team: v.team,
+        power: v.power
+    }));
 }
 
 async function getAllVillainsByUser(userId) {
-  const all = await getAllVillains();
-  return all.filter(v => v.userId === userId);
+    const villains = await Villain.find({ userId }).lean();
+    return villains.map(v => ({
+        id: v._id,
+        name: v.name,
+        alias: v.alias,
+        city: v.city,
+        team: v.team,
+        power: v.power
+    }));
 }
 
 async function addVillain(villain) {
     if (!villain.name || !villain.alias) {
         throw new Error("El villano debe tener un nombre y un alias.");
     }
-    const villains = await villainRepository.getVillains();
-    const newId = villains.length > 0 ? Math.max(...villains.map(v => v.id)) + 1 : 1;
-    const newVillain = { ...villain, id: newId };
-    villains.push(newVillain);
-    await villainRepository.saveVillains(villains);
-    return newVillain;
+    // El id numérico es opcional, pero si quieres mantenerlo:
+    const lastVillain = await Villain.findOne().sort({ id: -1 });
+    const newId = lastVillain && lastVillain.id ? lastVillain.id + 1 : 1;
+    const newVillain = new Villain({ ...villain, id: newId });
+    await newVillain.save();
+    return newVillain.toObject();
 }
 
 async function updateVillain(id, updatedVillain) {
-    const villains = await villainRepository.getVillains();
-    const index = villains.findIndex(villain => villain.id === parseInt(id));
-    if (index === -1) {
-        throw new Error('Villano no encontrado');
-    }
-    delete updatedVillain.id;
-    villains[index] = { ...villains[index], ...updatedVillain };
-    await villainRepository.saveVillains(villains);
-    return villains[index];
+    // Buscar por id numérico o por _id de MongoDB
+    const villain = await Villain.findOneAndUpdate(
+        { $or: [{ id: parseInt(id) }, { _id: id }] },
+        { $set: updatedVillain },
+        { new: true }
+    );
+    if (!villain) throw new Error('Villano no encontrado');
+    return villain.toObject();
 }
 
 async function deleteVillain(id) {
-    const villains = await villainRepository.getVillains();
-    const index = villains.findIndex(villain => villain.id === parseInt(id));
-    if (index === -1) {
-        throw new Error('Villano no encontrado');
-    }
-    const filteredVillains = villains.filter(villain => villain.id !== parseInt(id));
-    await villainRepository.saveVillains(filteredVillains);
+    const villain = await Villain.findOneAndDelete({ $or: [{ id: parseInt(id) }, { _id: id }] });
+    if (!villain) throw new Error('Villano no encontrado');
     return { message: 'Villano eliminado' };
 }
 
 async function findVillainsByCity(city) {
-    const villains = await villainRepository.getVillains();
-    return villains.filter(villain => villain.city && villain.city.toLowerCase() === city.toLowerCase());
+    return await Villain.find({ city: new RegExp(`^${city}$`, 'i') }).lean();
 }
 
 export default {

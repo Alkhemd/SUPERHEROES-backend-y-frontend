@@ -1,26 +1,49 @@
 import bcrypt from 'bcryptjs';
-import { v4 as uuidv4 } from 'uuid';
-import userRepository from '../repositories/userRepository.js';
+import jwt from 'jsonwebtoken';
 import User from '../models/userModel.js';
 
 const SALT_ROUNDS = 10;
+const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 
 export default {
-  async register(username, password) {
-    if (userRepository.findByUsername(username)) {
-      throw new Error('El usuario ya existe');
+  // Registrar usuario con username, email y password
+  async registerUser({ username, email, password }) {
+    // Verificar unicidad de username y email
+    if (await User.findOne({ username })) {
+      throw new Error('El nombre de usuario ya está en uso.');
+    }
+    if (await User.findOne({ email })) {
+      throw new Error('Ya existe una cuenta con ese correo, por favor introduce otro.');
     }
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-    const user = new User({ id: uuidv4(), username, password: hashedPassword });
-    userRepository.create(user);
-    return { id: user.id, username: user.username };
+    const user = new User({ username, email, password: hashedPassword });
+    await user.save();
+    return { id: user._id, username: user.username, email: user.email };
   },
 
-  async login(username, password) {
-    const user = userRepository.findByUsername(username);
-    if (!user) throw new Error('Usuario o contraseña incorrectos');
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) throw new Error('Usuario o contraseña incorrectos');
-    return { id: user.id, username: user.username };
+  // Buscar usuario por username o email
+  async findByUsernameOrEmail(usernameOrEmail) {
+    return await User.findOne({
+      $or: [
+        { username: usernameOrEmail },
+        { email: usernameOrEmail }
+      ]
+    });
+  },
+
+  // Validar password
+  async verifyPassword(user, password) {
+    return await bcrypt.compare(password, user.password);
+  },
+
+  // Generar JWT (debes tener tu lógica de JWT aquí)
+  async generateJWT(user) {
+    // Generar un JWT con el _id del usuario
+    return jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '24h' });
+  },
+
+  // Obtener todos los usuarios
+  async getAllUsers() {
+    return await User.find().lean();
   }
 }; 
