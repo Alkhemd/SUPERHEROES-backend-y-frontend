@@ -1,4 +1,8 @@
 // Configuración Swagger para la API de superhéroes y villanos
+const serverUrl = process.env.NODE_ENV === 'production'
+  ? 'https://superheroes-backend-y-frontend.onrender.com/api'
+  : 'http://localhost:3001/api';
+
 export default {
   definition: {
     openapi: '3.0.0',
@@ -9,7 +13,7 @@ export default {
     },
     servers: [
       {
-        url: 'http://localhost:3001/api',
+        url: serverUrl, // URL dinámica según entorno
       },
     ],
     components: {
