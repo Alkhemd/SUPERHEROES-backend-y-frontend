@@ -19,7 +19,7 @@ Una API REST completa para gestionar superhéroes, villanos y batallas épicas e
 
 ## 🛠️ Instalación
 
-<!-- Línea de prueba para commit -->
+<!-- Se está cocinando lentamente algo... 🍳 -->
 
 ```bash
 # Clonar el repositorio
