@@ -16,7 +16,10 @@ Una API REST completa para gestionar superhéroes, villanos y batallas épicas e
 - Node.js 18+
 - npm o yarn
 
+
 ## 🛠️ Instalación
+
+<!-- Línea de prueba para commit -->
 
 ```bash
 # Clonar el repositorio
