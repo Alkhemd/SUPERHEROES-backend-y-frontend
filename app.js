@@ -12,13 +12,14 @@ import { fileURLToPath } from 'url';
 const app = express();
 
 const swaggerSpec = swaggerJSDoc(swaggerConfig);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec)); // Swagger SIEMPRE antes del frontend
 
-// Ruta para exponer el JSON de Swagger
+// Ruta para exponer el JSON de Swagger (debe ir antes del Swagger UI)
 app.get('/api-docs/swagger.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec)); // Swagger SIEMPRE antes del frontend
 
 // Redirigir la raíz al Swagger UI
 app.get('/', (req, res) => {
