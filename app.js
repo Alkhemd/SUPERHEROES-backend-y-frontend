@@ -1,25 +1,33 @@
 import express from 'express';
+import cors from 'cors';
 import heroController from './controllers/heroController.js';
 import villainController from './controllers/villainController.js';
-import battleController from './controllers/battleController.js'; // 👈 NUEVO
+import battleController from './controllers/battleController.js';
 import authController from './controllers/authController.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerConfig from './swaggerConfig.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 const app = express();
 
+// Configuración de CORS para permitir requests desde cualquier origen
+app.use(cors({
+  origin: '*', // Permite requests desde cualquier dominio
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
+}));
+
 const swaggerSpec = swaggerJSDoc(swaggerConfig);
 
-// Ruta para exponer el JSON de Swagger (debe ir antes del Swagger UI)
+// Ruta para exponer el JSON de Swagger
 app.get('/api-docs/swagger.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec)); // Swagger SIEMPRE antes del frontend
+// Documentación Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Redirigir la raíz al Swagger UI
 app.get('/', (req, res) => {
@@ -31,20 +39,10 @@ app.use(express.json());
 // Rutas de la API
 app.use('/api', heroController);
 app.use('/api', villainController);
-app.use('/api', battleController); // 👈 NUEVO
+app.use('/api', battleController);
 app.use('/api/auth', authController);
 
-// Servir el frontend estático al final
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-app.use(express.static('public'));
-
-// (Opcional) Catch-all para SPA frontend
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en el puerto ${PORT}`);
     console.log(`Swagger disponible en http://localhost:${PORT}/api-docs`);

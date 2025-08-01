@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Superhéroes - Batalla Épica</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Pantalla de Carga -->
+    <div id="loading-screen" class="screen active">
+        <div class="loading-container">
+            <div class="loading-logo">⚡ SUPERHÉROES ⚡</div>
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Cargando la batalla épica...</div>
+        </div>
+    </div>
+
+    <!-- Pantalla de Inicio (Login/Registro) -->
+    <div id="auth-screen" class="screen">
+        <div class="auth-container">
+            <h1 class="app-title">⚡ SUPERHÉROES ⚡</h1>
+            <div class="auth-tabs">
+                <button id="login-tab" class="tab-btn active">Iniciar Sesión</button>
+                <button id="register-tab" class="tab-btn">Registrarse</button>
+            </div>
+
+            <!-- Formulario de Login -->
+            <form id="login-form" class="auth-form active">
+                <h2>Bienvenido de vuelta, héroe</h2>
+                <div class="form-group">
+                    <input type="text" id="login-username" placeholder="Usuario o Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="login-password" placeholder="Contraseña" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+            </form>
+
+            <!-- Formulario de Registro -->
+            <form id="register-form" class="auth-form">
+                <h2>Únete a la batalla</h2>
+                <div class="form-group">
+                    <input type="text" id="register-username" placeholder="Nombre de usuario" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="register-email" placeholder="Correo electrónico" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="register-password" placeholder="Contraseña" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Registrarse</button>
+            </form>
+
+            <div id="auth-message" class="message"></div>
+        </div>
+    </div>
+
+    <!-- Pantalla de Selección de Personajes -->
+    <div id="characters-screen" class="screen">
+        <div class="characters-container">
+            <header class="app-header">
+                <h1>⚡ SUPERHÉROES ⚡</h1>
+                <div class="user-info">
+                    <span id="username-display">Usuario</span>
+                    <button id="logout-btn" class="btn btn-secondary">Cerrar Sesión</button>
+                </div>
+            </header>
+
+            <div class="characters-tabs">
+                <button id="heroes-tab" class="character-tab active">🦸‍♂️ HÉROES</button>
+                <button id="villains-tab" class="character-tab">🦹‍♂️ VILLANOS</button>
+            </div>
+
+            <!-- Lista de Héroes -->
+            <div id="heroes-list" class="characters-list active">
+                <div class="characters-header">
+                    <h2>Selecciona tus Héroes</h2>
+                    <button id="add-hero-btn" class="btn btn-primary">+ Agregar Héroe</button>
+                </div>
+                <div id="heroes-grid" class="characters-grid">
+                    <!-- Los héroes se cargarán dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Lista de Villanos -->
+            <div id="villains-list" class="characters-list">
+                <div class="characters-header">
+                    <h2>Selecciona tus Villanos</h2>
+                    <button id="add-villain-btn" class="btn btn-primary">+ Agregar Villano</button>
+                </div>
+                <div id="villains-grid" class="characters-grid">
+                    <!-- Los villanos se cargarán dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Agregar/Editar Personajes -->
+    <div id="character-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modal-title">Agregar Personaje</h2>
+            <form id="character-form">
+                <div class="form-group">
+                    <label for="character-name">Nombre Real:</label>
+                    <input type="text" id="character-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="character-alias">Alias/Nombre de Superhéroe:</label>
+                    <input type="text" id="character-alias" required>
+                </div>
+                <div class="form-group">
+                    <label for="character-city">Ciudad:</label>
+                    <input type="text" id="character-city">
+                </div>
+                <div class="form-group">
+                    <label for="character-team">Equipo/Organización:</label>
+                    <input type="text" id="character-team">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="cancel-btn" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
